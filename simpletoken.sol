@@ -5,7 +5,6 @@ import "@openzeppelin/upgrades/contracts/Initializable.sol";
 import "./SafeMath.sol";
 import "./ERC20Detailed.sol";
 import  "./IERC20.sol";
-// import "./SafeERC20.sol";
 
 contract OTokenInterface is IERC20 {
   function balanceOf(address who) public view returns (uint256);
@@ -27,7 +26,6 @@ contract simpleToken is Initializable, ERC20 ,ERC20Detailed {
         decimal = _decimal;
         ratio = _ratio;
         oTokenContract = OTokenInterface(_otaddress);
-
     }
     
     modifier onlyOwner {
@@ -37,13 +35,14 @@ contract simpleToken is Initializable, ERC20 ,ERC20Detailed {
 
     function mint(uint _amount) external onlyOwner{
         uint balanceOt = oTokenContract.balanceOf(address(this));
-        require(balanceOt.sub(blocked_token) >= _amount, "Balance should be less than eqal to _amount");
-        blocked_token = blocked_token.add(_amount);
+        require(balanceOt.sub(blocked_token).mul(ratio) >= _amount, "OT Balance should be sufficient to mint token amount * ratio");
+        require(_amount.mul(ratio) >= ratio, "Min. token to be minted corresponding to OT"); // ratio to 1 OT should be minted for token 
+        blocked_token = blocked_token.add(_amount.div(ratio));
         _mint(owner, _amount); // mint to owner always
     }
 
     function burn(uint _amount) external onlyOwner { 
-          require(blocked_token >= _amount, "Balance should be gretaer than equal to _amount");
+          require(blocked_token.mul(ratio) >= _amount, "Balance should be greater than equal to _amount");
          blocked_token = blocked_token.sub(_amount);
         _burn(msg.sender,_amount);
     }
@@ -58,5 +57,4 @@ contract simpleToken is Initializable, ERC20 ,ERC20Detailed {
         uint256 balanceOt = oTokenContract.balanceOf(address(this));
         return balanceOt;
     }
-
 }
